@@ -3,8 +3,8 @@ const project = new ProjenCdkConstructLibrary({
   releaseToNpm: true,
   npmTrustedPublishing: true,
   cdkVersion: '2.272.0',
-  name: 'eventbridge-email-notifier',
-  repositoryUrl: 'https://github.com/gammarers-aws-cdk-constructs/eventbridge-email-notifier.git',
+  name: 'event-email-notifier',
+  repositoryUrl: 'https://github.com/gammarers-aws-cdk-constructs/event-email-notifier.git',
   description: 'EventBridge rule target that sends email through Amazon SNS with a static or event-derived subject.',
   keywords: ['aws', 'cdk', 'construct', 'eventbridge', 'email', 'notifier'],
   devDeps: [

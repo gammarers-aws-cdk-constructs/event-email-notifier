@@ -166,7 +166,7 @@
         {
           "execArgs": [
             "jsii-diff",
-            "npm:eventbridge-email-notifier",
+            "npm:event-email-notifier",
             "-k",
             "--ignore-file",
             ".compatignore"
