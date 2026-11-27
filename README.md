@@ -24,7 +24,7 @@ EventBridge invokes a small Lambda publisher with an input object of `topicArn`,
 
 Each stack has one publisher Lambda. The generated function sets a fixed uuid, and CDK shares that function across every notifier in the stack. The target input carries that target's topic, subject, and message, so different subjects and topics still share the function. Email subscriptions are not created by this library, and the topic resource policy is not modified—add subscriptions in the console or API when addresses change.
 
-The publisher Lambda timeout is 120 seconds and is not configurable via props today. Each SNS Publish attempt waits up to 5 seconds for a connection and 30 seconds for a response. The SDK retries within `maxAttempts` 3, and the function timeout covers that full budget.
+The publisher Lambda timeout is 120 seconds and is not configurable via props today. Each SNS Publish attempt waits up to 5 seconds for a connection and 30 seconds for a response. SDK retries finish inside that function timeout.
 
 ## Installation
 

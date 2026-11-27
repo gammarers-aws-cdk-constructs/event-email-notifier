@@ -422,6 +422,9 @@ const sanitizeConstantSubjectFragment = (fragment: InputFragment): InputFragment
   };
 };
 
+/**
+ * Prefix resolved input path keys so subject and message keys do not collide.
+ */
 const prefixResolvedPathKeys = (
   template: string,
   paths: { [key: string]: string },
@@ -443,6 +446,9 @@ const prefixResolvedPathKeys = (
   };
 };
 
+/**
+ * Rewrite `<key>` placeholders to the prefixed names.
+ */
 const replacePlaceholderKeys = (
   template: string,
   keys: readonly string[],
@@ -453,6 +459,9 @@ const replacePlaceholderKeys = (
   }, template);
 };
 
+/**
+ * True when a path map or EventBridge placeholder needs an input template instead of a static input.
+ */
 const fragmentNeedsTemplate = (fragment: InputFragment): boolean => {
   if (Object.keys(fragment.paths).length > 0) {
     return true;

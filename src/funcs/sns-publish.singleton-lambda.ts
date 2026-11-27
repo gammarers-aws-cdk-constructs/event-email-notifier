@@ -43,7 +43,10 @@ export const toSnsMessage = (event: unknown): string => {
  * The subject is sanitized to SNS limits before Publish.
  *
  * @param event - Payload EventBridge passed to the function
- * @throws Error when the payload is missing `topicArn`, `subject`, or `message`, or the subject is empty after sanitization
+ * @throws Error when the event is not an object with `topicArn`, `subject`, and `message`
+ * @throws Error when `topicArn` is missing, empty, or not a string
+ * @throws Error when `subject` is not a string, or is empty after sanitization
+ * @throws Error when `message` is missing
  */
 export const handler = async (event: unknown): Promise<void> => {
   const request = parsePublishRequest(event);
