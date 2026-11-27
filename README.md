@@ -1,11 +1,11 @@
-# EventBridge Email Notifier (CDK v2)
+# Event Email Notifier (CDK v2)
 
-[![npm version](https://img.shields.io/npm/v/eventbridge-email-notifier?style=flat-square)](https://www.npmjs.com/package/eventbridge-email-notifier)
-[![license](https://img.shields.io/npm/l/eventbridge-email-notifier?style=flat-square)](https://www.npmjs.com/package/eventbridge-email-notifier)
-[![Node.js](https://img.shields.io/node/v/eventbridge-email-notifier?style=flat-square)](https://www.npmjs.com/package/eventbridge-email-notifier)
-[![build](https://img.shields.io/github/actions/workflow/status/gammarers-aws-cdk-constructs/eventbridge-email-notifier/build.yml?label=build&style=flat-square)](https://github.com/gammarers-aws-cdk-constructs/eventbridge-email-notifier/actions/workflows/build.yml)
+[![npm version](https://img.shields.io/npm/v/event-email-notifier?style=flat-square)](https://www.npmjs.com/package/event-email-notifier)
+[![license](https://img.shields.io/npm/l/event-email-notifier?style=flat-square)](https://www.npmjs.com/package/event-email-notifier)
+[![Node.js](https://img.shields.io/node/v/event-email-notifier?style=flat-square)](https://www.npmjs.com/package/event-email-notifier)
+[![build](https://img.shields.io/github/actions/workflow/status/gammarers-aws-cdk-constructs/event-email-notifier/build.yml?label=build&style=flat-square)](https://github.com/gammarers-aws-cdk-constructs/event-email-notifier/actions/workflows/build.yml)
 
-[![View on Construct Hub](https://constructs.dev/badge?package=eventbridge-email-notifier)](https://constructs.dev/packages/eventbridge-email-notifier)
+[![View on Construct Hub](https://constructs.dev/badge?package=event-email-notifier)](https://constructs.dev/packages/event-email-notifier)
 
 EventBridge rule target that sends email through Amazon SNS with a custom subject.
 The subject can be a fixed string or a value taken from the event, such as a pipeline state.
@@ -31,19 +31,19 @@ The publisher Lambda timeout is 120 seconds and is not configurable via props to
 ### npm
 
 ```bash
-npm install eventbridge-email-notifier
+npm install event-email-notifier
 ```
 
 ### yarn
 
 ```bash
-yarn add eventbridge-email-notifier
+yarn add event-email-notifier
 ```
 
 ### pnpm
 
 ```bash
-pnpm add eventbridge-email-notifier
+pnpm add event-email-notifier
 ```
 
 ## Usage
@@ -55,7 +55,7 @@ import { App, Stack, type StackProps } from 'aws-cdk-lib';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import { Construct } from 'constructs';
-import { EventBridgeEmailNotifier } from 'eventbridge-email-notifier';
+import { EventEmailNotifier } from 'event-email-notifier';
 
 class NotifierStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
@@ -68,7 +68,7 @@ class NotifierStack extends Stack {
       },
     });
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Pipeline failed',
     }));
   }
@@ -95,7 +95,7 @@ Deploy checklist:
 ### Subject from the event
 
 ```typescript
-rule.addTarget(new EventBridgeEmailNotifier(topic, {
+rule.addTarget(new EventEmailNotifier(topic, {
   subject: events.EventField.fromPath('$.detail.state'),
   message: events.RuleTargetInput.fromObject({
     pipeline: events.EventField.fromPath('$.detail.pipeline'),

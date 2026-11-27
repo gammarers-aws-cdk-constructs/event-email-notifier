@@ -4,7 +4,7 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
-import { EventBridgeEmailNotifier } from '../src';
+import { EventEmailNotifier } from '../src';
 import { PUBLISHER_TIMEOUT_SECONDS } from '../src/settings/consts';
 
 const REMOVED_SUBJECT_ENV = 'SUBJECT';
@@ -183,11 +183,11 @@ const expectPublisherWiring = (template: Template, lambdaCount: number): void =>
   });
 };
 
-describe('EventBridgeEmailNotifier', () => {
+describe('EventEmailNotifier', () => {
   test('routes EventBridge through Lambda to SNS with custom subject', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Pipeline failed',
       message: events.RuleTargetInput.fromText('Check the pipeline'),
     }));
@@ -198,13 +198,13 @@ describe('EventBridgeEmailNotifier', () => {
     const payload = targetPayloadText(template);
     expect(payload).toContain('Pipeline failed');
     expect(payload).toContain('Check the pipeline');
-    expect(payload).toContain('EventBridgeEmailNotifier');
+    expect(payload).toContain('EventEmailNotifier');
   });
 
   test('publishes the whole event when message is omitted', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Pipeline failed',
     }));
 
@@ -220,7 +220,7 @@ describe('EventBridgeEmailNotifier', () => {
   ])('reads the subject from %s', (_label, subject) => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject,
     }));
 
@@ -232,7 +232,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('passes a static object subject through as JSON', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: events.RuleTargetInput.fromObject({
         text: 'hello',
       }),
@@ -244,7 +244,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('keeps one object field as the subject value', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: events.RuleTargetInput.fromObject({
         state: events.EventField.fromPath('$.detail.state'),
       }),
@@ -258,7 +258,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('passes an object subject through the input transformer', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: events.RuleTargetInput.fromObject({
         state: events.EventField.fromPath('$.detail.state'),
         pipeline: events.EventField.fromPath('$.detail.pipeline'),
@@ -275,7 +275,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('embeds message fields from the event', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Pipeline failed',
       message: events.RuleTargetInput.fromObject({
         pipeline: events.EventField.fromPath('$.detail.pipeline'),
@@ -295,7 +295,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('sanitizes subject for SNS constraints', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: `Alert\n${'x'.repeat(120)}`,
     }));
 
@@ -307,7 +307,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('sanitizes a static RuleTargetInput subject', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: events.RuleTargetInput.fromText(`Alert\n${'x'.repeat(120)}`),
     }));
 
@@ -319,7 +319,7 @@ describe('EventBridgeEmailNotifier', () => {
     const { topic } = createStackWithRule();
 
     expect(() => {
-      new EventBridgeEmailNotifier(topic, {
+      new EventEmailNotifier(topic, {
         subject: '\n\r\t',
       });
     }).toThrow(/non-control character/);
@@ -329,7 +329,7 @@ describe('EventBridgeEmailNotifier', () => {
     const { topic, rule } = createStackWithRule();
 
     expect(() => {
-      new EventBridgeEmailNotifier(topic, {
+      new EventEmailNotifier(topic, {
         subject: events.RuleTargetInput.fromText('\n'),
       }).bind(rule);
     }).toThrow(/non-control character/);
@@ -339,7 +339,7 @@ describe('EventBridgeEmailNotifier', () => {
     const { topic } = createStackWithRule();
 
     expect(() => {
-      new EventBridgeEmailNotifier(topic, {
+      new EventEmailNotifier(topic, {
         subject: Lazy.string({ produce: () => 'later' }),
       });
     }).toThrow(/event path/);
@@ -348,11 +348,11 @@ describe('EventBridgeEmailNotifier', () => {
   test('uses one Lambda for different subjects on the same rule', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'First subject',
       message: events.RuleTargetInput.fromText('first'),
     }));
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Second subject',
       message: events.RuleTargetInput.fromText('second'),
     }));
@@ -361,7 +361,7 @@ describe('EventBridgeEmailNotifier', () => {
     expectPublisherWiring(template, 1);
     expect(publishStatementCount(template)).toBe(1);
     expect(Object.keys(template.findResources('AWS::Lambda::Function'))[0])
-      .toContain('EventBridgeEmailNotifier');
+      .toContain('EventEmailNotifier');
 
     const targets = ruleTargets(template);
     expect(targets).toHaveLength(2);
@@ -380,11 +380,11 @@ describe('EventBridgeEmailNotifier', () => {
   test('reuses one Lambda when topic and subject match on the same rule', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Same subject',
       message: events.RuleTargetInput.fromText('one'),
     }));
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Same subject',
       message: events.RuleTargetInput.fromText('two'),
     }));
@@ -407,11 +407,11 @@ describe('EventBridgeEmailNotifier', () => {
   test('reuses one Lambda when the event path is the same', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: events.EventField.fromPath('$.detail.state'),
       message: events.RuleTargetInput.fromText('one'),
     }));
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: events.RuleTargetInput.fromEventPath('$.detail.state'),
       message: events.RuleTargetInput.fromText('two'),
     }));
@@ -432,11 +432,11 @@ describe('EventBridgeEmailNotifier', () => {
     const { stack, topic, rule } = createStackWithRule();
     const other = new sns.Topic(stack, 'OtherTopic');
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Same subject',
       message: events.RuleTargetInput.fromText('one'),
     }));
-    rule.addTarget(new EventBridgeEmailNotifier(other, {
+    rule.addTarget(new EventEmailNotifier(other, {
       subject: 'Same subject',
       message: events.RuleTargetInput.fromText('two'),
     }));
@@ -455,8 +455,8 @@ describe('EventBridgeEmailNotifier', () => {
   test('uses one Lambda when bind is called without an id', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    const alpha = new EventBridgeEmailNotifier(topic, { subject: 'Alpha' }).bind(rule);
-    const beta = new EventBridgeEmailNotifier(topic, { subject: 'Beta' }).bind(rule);
+    const alpha = new EventEmailNotifier(topic, { subject: 'Alpha' }).bind(rule);
+    const beta = new EventEmailNotifier(topic, { subject: 'Beta' }).bind(rule);
 
     const template = Template.fromStack(stack);
     expect(Object.keys(template.findResources('AWS::Lambda::Function'))).toHaveLength(1);
@@ -470,8 +470,8 @@ describe('EventBridgeEmailNotifier', () => {
       eventPattern: { source: ['aws.codepipeline'] },
     });
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, { subject: 'First subject' }));
-    other.addTarget(new EventBridgeEmailNotifier(topic, { subject: 'Second subject' }));
+    rule.addTarget(new EventEmailNotifier(topic, { subject: 'First subject' }));
+    other.addTarget(new EventEmailNotifier(topic, { subject: 'Second subject' }));
 
     const template = Template.fromStack(stack);
     template.resourceCountIs('AWS::Lambda::Function', 1);
@@ -487,8 +487,8 @@ describe('EventBridgeEmailNotifier', () => {
   test('declares the publisher under the rule with the target id', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, { subject: 'First subject' }));
-    rule.addTarget(new EventBridgeEmailNotifier(topic, { subject: 'Second subject' }));
+    rule.addTarget(new EventEmailNotifier(topic, { subject: 'First subject' }));
+    rule.addTarget(new EventEmailNotifier(topic, { subject: 'Second subject' }));
 
     expect(rule.node.tryFindChild('EmailNotifierPublisherTarget0')).toBeDefined();
     expect(rule.node.tryFindChild('EmailNotifierPublisherTarget1')).toBeDefined();
@@ -506,10 +506,10 @@ describe('EventBridgeEmailNotifier', () => {
       eventPattern: { source: ['aws.codepipeline'] },
     });
 
-    leftRule.addTarget(new EventBridgeEmailNotifier(new sns.Topic(left, 'Topic'), {
+    leftRule.addTarget(new EventEmailNotifier(new sns.Topic(left, 'Topic'), {
       subject: 'Left subject',
     }));
-    rightRule.addTarget(new EventBridgeEmailNotifier(new sns.Topic(right, 'Topic'), {
+    rightRule.addTarget(new EventEmailNotifier(new sns.Topic(right, 'Topic'), {
       subject: 'Right subject',
     }));
 
@@ -521,7 +521,7 @@ describe('EventBridgeEmailNotifier', () => {
     const { stack, topic, rule } = createStackWithRule();
     const dlq = new sqs.Queue(stack, 'Dlq');
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'With retries',
       deadLetterQueue: dlq,
       retryAttempts: 2,
@@ -562,7 +562,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('rejects an input that is not text, a path, or an object template', () => {
     const { topic, rule } = createStackWithRule();
 
-    const target = new EventBridgeEmailNotifier(topic, {
+    const target = new EventEmailNotifier(topic, {
       subject: new TargetInput({}),
     }).bind(rule);
 
@@ -572,7 +572,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('passes a constant input template through without path keys', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Static subject',
       message: new TargetInput({ inputTemplate: '{"note":"fixed"}' }),
     }));
@@ -583,7 +583,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('keeps a subject fragment that is not JSON', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: new TargetInput({ input: 'not-json' }),
     }));
 
@@ -593,7 +593,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('rejects subject and message that reuse a path key for different paths', () => {
     const { topic, rule } = createStackWithRule();
 
-    const target = new EventBridgeEmailNotifier(topic, {
+    const target = new EventEmailNotifier(topic, {
       subject: new TopicPathInput(topic, '$.detail.state'),
       message: new TopicPathInput(topic, '$.detail.pipeline'),
     }).bind(rule);
@@ -604,7 +604,7 @@ describe('EventBridgeEmailNotifier', () => {
   test('allows subject and message to reuse a path key for the same path', () => {
     const { stack, topic, rule } = createStackWithRule();
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: new TopicPathInput(topic, '$.detail.state'),
       message: new TopicPathInput(topic, '$.detail.state'),
     }));
@@ -625,7 +625,7 @@ describe('EventBridgeEmailNotifier', () => {
     });
 
     expect(() => {
-      rule.addTarget(new EventBridgeEmailNotifier(new sns.Topic(stack, 'Topic'), {
+      rule.addTarget(new EventEmailNotifier(new sns.Topic(stack, 'Topic'), {
         subject: 'Region mismatch',
         deadLetterQueue: new sqs.Queue(away, 'Dlq'),
       }));
@@ -644,7 +644,7 @@ describe('EventBridgeEmailNotifier', () => {
       eventPattern: { source: ['aws.codepipeline'] },
     });
 
-    rule.addTarget(new EventBridgeEmailNotifier(new sns.Topic(stack, 'Topic'), {
+    rule.addTarget(new EventEmailNotifier(new sns.Topic(stack, 'Topic'), {
       subject: 'Other account',
       deadLetterQueue: new sqs.Queue(away, 'Dlq', { queueName: 'cross-account-dlq' }),
     }));
@@ -669,7 +669,7 @@ describe('EventBridgeEmailNotifier', () => {
       },
     } as events.IRuleRef;
 
-    new EventBridgeEmailNotifier(topic, { subject: 'Plain subject' }).bind(ruleRef);
+    new EventEmailNotifier(topic, { subject: 'Plain subject' }).bind(ruleRef);
 
     expect(Object.keys(Template.fromStack(stack).findResources('AWS::Lambda::Function'))).toHaveLength(1);
   });
@@ -687,7 +687,7 @@ const snapshotCases: readonly SnapshotCase[] = [
     name: 'static subject',
     lambdaCount: 1,
     arrange: ({ topic, rule }) => {
-      rule.addTarget(new EventBridgeEmailNotifier(topic, {
+      rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'Pipeline failed',
         message: events.RuleTargetInput.fromText('Check the pipeline'),
       }));
@@ -702,7 +702,7 @@ const snapshotCases: readonly SnapshotCase[] = [
     name: 'event path subject',
     lambdaCount: 1,
     arrange: ({ topic, rule }) => {
-      rule.addTarget(new EventBridgeEmailNotifier(topic, {
+      rule.addTarget(new EventEmailNotifier(topic, {
         subject: events.EventField.fromPath('$.detail.state'),
       }));
     },
@@ -716,7 +716,7 @@ const snapshotCases: readonly SnapshotCase[] = [
     name: 'dead-letter queue and retry',
     lambdaCount: 1,
     arrange: ({ stack, topic, rule }) => {
-      rule.addTarget(new EventBridgeEmailNotifier(topic, {
+      rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'With retries',
         deadLetterQueue: new sqs.Queue(stack, 'Dlq'),
         retryAttempts: 2,
@@ -743,11 +743,11 @@ const snapshotCases: readonly SnapshotCase[] = [
     name: 'distinct subjects',
     lambdaCount: 1,
     arrange: ({ topic, rule }) => {
-      rule.addTarget(new EventBridgeEmailNotifier(topic, {
+      rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'First subject',
         message: events.RuleTargetInput.fromText('first'),
       }));
-      rule.addTarget(new EventBridgeEmailNotifier(topic, {
+      rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'Second subject',
         message: events.RuleTargetInput.fromText('second'),
       }));
@@ -766,11 +766,11 @@ const snapshotCases: readonly SnapshotCase[] = [
     name: 'reused subject',
     lambdaCount: 1,
     arrange: ({ topic, rule }) => {
-      rule.addTarget(new EventBridgeEmailNotifier(topic, {
+      rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'Same subject',
         message: events.RuleTargetInput.fromText('one'),
       }));
-      rule.addTarget(new EventBridgeEmailNotifier(topic, {
+      rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'Same subject',
         message: events.RuleTargetInput.fromText('two'),
       }));

@@ -14,7 +14,7 @@ import {
   SNS_SUBJECT_MAX_LENGTH,
 } from './settings/consts';
 
-const PUBLISHER_LAMBDA_PURPOSE = 'EventBridgeEmailNotifier';
+const PUBLISHER_LAMBDA_PURPOSE = 'EventEmailNotifier';
 
 /**
  * EventBridge predefined variable for the full event JSON.
@@ -26,9 +26,9 @@ const EVENT_JSON_VARIABLE = '<aws.events.event.json>';
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F-\u009F]/g;
 
 /**
- * Properties for {@link EventBridgeEmailNotifier}.
+ * Properties for {@link EventEmailNotifier}.
  */
-export interface EventBridgeEmailNotifierProps {
+export interface EventEmailNotifierProps {
   /**
    * Email subject used when publishing to SNS.
    *
@@ -113,21 +113,21 @@ export const sanitizeSnsSubject = (subject: string): string => {
  * This target does not change the topic resource policy.
  *
  * @example
- * rule.addTarget(new EventBridgeEmailNotifier(topic, {
+ * rule.addTarget(new EventEmailNotifier(topic, {
  *   subject: 'Pipeline failed',
  *   message: events.RuleTargetInput.fromText('Check CodePipeline'),
  * }));
  */
-export class EventBridgeEmailNotifier implements events.IRuleTarget {
+export class EventEmailNotifier implements events.IRuleTarget {
   private readonly topic: sns.ITopic;
-  private readonly props: EventBridgeEmailNotifierProps;
+  private readonly props: EventEmailNotifierProps;
 
   /**
    * @param topic - SNS topic used for email delivery
    * @param props - Subject, message, and EventBridge retry / DLQ options
    * @throws Error when a string subject is empty after sanitization, or is an unresolved token that is not an event path
    */
-  constructor(topic: sns.ITopic, props: EventBridgeEmailNotifierProps) {
+  constructor(topic: sns.ITopic, props: EventEmailNotifierProps) {
     this.topic = topic;
     this.props = props;
     ensureSubjectAtConstruction(props.subject);
@@ -546,7 +546,7 @@ const publisherFunction = (
 const publisherDeclarationId = (stack: Stack): string => {
   const count = publisherDeclarations.get(stack) ?? 0;
   publisherDeclarations.set(stack, count + 1);
-  return `EventBridgeEmailNotifierPublisher${count}`;
+  return `EventEmailNotifierPublisher${count}`;
 };
 
 /**
@@ -627,7 +627,7 @@ const addDeadLetterQueuePolicy = (rule: events.IRuleRef, queue: sqs.IQueue): voi
  * Map DLQ / retry props onto RuleTargetConfig fields.
  */
 const bindRetryAndDlqConfig = (
-  props: EventBridgeEmailNotifierProps,
+  props: EventEmailNotifierProps,
 ): Pick<events.RuleTargetConfig, 'deadLetterConfig' | 'retryPolicy'> => {
   const { deadLetterQueue, retryAttempts, maxEventAge } = props;
   const hasRetryPolicy = (retryAttempts !== undefined && retryAttempts >= 0)
