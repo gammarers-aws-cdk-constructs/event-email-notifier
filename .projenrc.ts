@@ -1,7 +1,7 @@
 import { ProjenCdkConstructLibrary } from '@gammarers/projen-projects';
 const project = new ProjenCdkConstructLibrary({
   releaseToNpm: true,
-  npmTrustedPublishing: true,
+  npmTrustedPublishing: false,
   cdkVersion: '2.272.0',
   name: 'event-email-notifier',
   repositoryUrl: 'https://github.com/gammarers-aws-cdk-constructs/event-email-notifier.git',
