@@ -53,7 +53,7 @@ export const handler = async (event: unknown): Promise<void> => {
 
   if (subject.length === 0) {
     throw new Error(
-      'subject must contain at least one non-control character after sanitization',
+      `subject is ${JSON.stringify(request.subject)}, expected at least one non-control character after sanitization`,
     );
   }
 

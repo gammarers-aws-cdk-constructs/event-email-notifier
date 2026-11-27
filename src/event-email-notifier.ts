@@ -471,7 +471,7 @@ const mergePathMaps = (
   for (const key of Object.keys(messagePaths)) {
     const existing = subjectPaths[key];
     if (existing !== undefined && existing !== messagePaths[key]) {
-      throw new Error(`subject and message use the same input path key "${key}"`);
+      throw new Error('subject and message must not reuse an input path key for different paths');
     }
   }
 
@@ -605,11 +605,7 @@ const addLambdaInvokePermission = (
  */
 const addDeadLetterQueuePolicy = (rule: IRuleRef, queue: IQueue): void => {
   if (!sameEnvDimension(rule.env.region, queue.env.region)) {
-    throw new Error(
-      `Cannot assign Dead Letter Queue in region ${queue.env.region} to the rule ` +
-      `${Names.nodeUniqueId(rule.node)} in region ${rule.env.region}. ` +
-      'Both the queue and the rule must be in the same region.',
-    );
+    throw new Error('deadLetterQueue must be in the same region as the rule');
   }
 
   if (!sameEnvDimension(rule.env.account, queue.env.account)) {

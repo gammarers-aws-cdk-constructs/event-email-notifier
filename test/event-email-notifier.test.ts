@@ -604,7 +604,9 @@ describe('EventEmailNotifier', () => {
       message: new TopicPathInput(topic, '$.detail.pipeline'),
     }).bind(rule);
 
-    expect(() => target.input?.bind(rule)).toThrow(/input path key "detail"/);
+    expect(() => target.input?.bind(rule)).toThrow(
+      /subject and message must not reuse an input path key/,
+    );
   });
 
   test('allows subject and message to reuse a path key for the same path', () => {

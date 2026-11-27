@@ -21,6 +21,25 @@ const isRecord = (event: unknown): event is Record<string, unknown> => {
 };
 
 /**
+ * Render a rejected payload value so the error names what arrived.
+ */
+const shownValue = (value: unknown): string => {
+  if (value === undefined) {
+    return 'undefined';
+  }
+
+  if (typeof value === 'string') {
+    return JSON.stringify(value);
+  }
+
+  if (value === null || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  return JSON.stringify(value);
+};
+
+/**
  * Read the publisher payload produced by the EventBridge input transformer.
  *
  * @param event - Lambda event
@@ -29,7 +48,9 @@ const isRecord = (event: unknown): event is Record<string, unknown> => {
  */
 export const parsePublishRequest = (event: unknown): PublishRequest => {
   if (!isRecord(event)) {
-    throw new Error('event must include topicArn, subject, and message');
+    throw new Error(
+      `event is ${shownValue(event)}, expected an object with topicArn, subject, and message`,
+    );
   }
 
   const topicArn = event[PUBLISH_TOPIC_ARN_FIELD];
@@ -37,15 +58,15 @@ export const parsePublishRequest = (event: unknown): PublishRequest => {
   const message = event[PUBLISH_MESSAGE_FIELD];
 
   if (!Object.hasOwn(event, PUBLISH_MESSAGE_FIELD) || message === undefined) {
-    throw new Error('event must include message');
+    throw new Error('message is undefined, expected a value');
   }
 
   if (typeof topicArn !== 'string' || topicArn.length === 0) {
-    throw new Error('topicArn must be a non-empty string');
+    throw new Error(`topicArn is ${shownValue(topicArn)}, expected a non-empty string`);
   }
 
   if (typeof subject !== 'string') {
-    throw new Error('subject must be a string');
+    throw new Error(`subject is ${shownValue(subject)}, expected a string`);
   }
 
   return {
