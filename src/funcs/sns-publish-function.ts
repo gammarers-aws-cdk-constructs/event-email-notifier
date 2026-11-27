@@ -19,7 +19,7 @@ export class SnsPublishFunction extends lambda.SingletonFunction {
     super(scope, id, {
       description: 'src/funcs/sns-publish.singleton-lambda.ts',
       ...props,
-      uuid: "acea0f6d179e9bd659af09d0b46b5f05",
+      uuid: "fa18fd0a2013a64b9af460b1675a3a93",
       runtime: new lambda.Runtime('nodejs24.x', lambda.RuntimeFamily.NODEJS, { supportsInlineCode: true }),
       handler: 'index.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../../assets/funcs/sns-publish.singleton-lambda')),

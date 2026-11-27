@@ -1,11 +1,11 @@
-# EventBridge Email Notifier (CDK v2)
+# Event Email Notifier (CDK v2)
 
-[![npm version](https://img.shields.io/npm/v/eventbridge-email-notifier?style=flat-square)](https://www.npmjs.com/package/eventbridge-email-notifier)
-[![license](https://img.shields.io/npm/l/eventbridge-email-notifier?style=flat-square)](https://www.npmjs.com/package/eventbridge-email-notifier)
-[![Node.js](https://img.shields.io/node/v/eventbridge-email-notifier?style=flat-square)](https://www.npmjs.com/package/eventbridge-email-notifier)
-[![build](https://img.shields.io/github/actions/workflow/status/gammarers-aws-cdk-constructs/eventbridge-email-notifier/build.yml?label=build&style=flat-square)](https://github.com/gammarers-aws-cdk-constructs/eventbridge-email-notifier/actions/workflows/build.yml)
+[![npm version](https://img.shields.io/npm/v/event-email-notifier?style=flat-square)](https://www.npmjs.com/package/event-email-notifier)
+[![license](https://img.shields.io/npm/l/event-email-notifier?style=flat-square)](https://www.npmjs.com/package/event-email-notifier)
+[![Node.js](https://img.shields.io/node/v/event-email-notifier?style=flat-square)](https://www.npmjs.com/package/event-email-notifier)
+[![build](https://img.shields.io/github/actions/workflow/status/gammarers-aws-cdk-constructs/event-email-notifier/build.yml?label=build&style=flat-square)](https://github.com/gammarers-aws-cdk-constructs/event-email-notifier/actions/workflows/build.yml)
 
-[![View on Construct Hub](https://constructs.dev/badge?package=eventbridge-email-notifier)](https://constructs.dev/packages/eventbridge-email-notifier)
+[![View on Construct Hub](https://constructs.dev/badge?package=event-email-notifier)](https://constructs.dev/packages/event-email-notifier)
 
 EventBridge rule target that sends email through Amazon SNS with a custom subject.
 The subject can be a fixed string or a value taken from the event, such as a pipeline state.
@@ -24,26 +24,26 @@ EventBridge invokes a small Lambda publisher with an input object of `topicArn`,
 
 Each stack has one publisher Lambda. The generated function sets a fixed uuid, and CDK shares that function across every notifier in the stack. The target input carries that target's topic, subject, and message, so different subjects and topics still share the function. Email subscriptions are not created by this library, and the topic resource policy is not modified—add subscriptions in the console or API when addresses change.
 
-The publisher Lambda timeout is 120 seconds and is not configurable via props today. Each SNS Publish attempt waits up to 5 seconds for a connection and 30 seconds for a response. The SDK retries within `maxAttempts` 3, and the function timeout covers that full budget.
+The publisher Lambda timeout is 120 seconds and is not configurable via props today. Each SNS Publish attempt waits up to 5 seconds for a connection and 30 seconds for a response. SDK retries finish inside that function timeout.
 
 ## Installation
 
 ### npm
 
 ```bash
-npm install eventbridge-email-notifier
+npm install event-email-notifier
 ```
 
 ### yarn
 
 ```bash
-yarn add eventbridge-email-notifier
+yarn add event-email-notifier
 ```
 
 ### pnpm
 
 ```bash
-pnpm add eventbridge-email-notifier
+pnpm add event-email-notifier
 ```
 
 ## Usage
@@ -52,23 +52,23 @@ pnpm add eventbridge-email-notifier
 
 ```typescript
 import { App, Stack, type StackProps } from 'aws-cdk-lib';
-import * as events from 'aws-cdk-lib/aws-events';
-import * as sns from 'aws-cdk-lib/aws-sns';
+import { Rule } from 'aws-cdk-lib/aws-events';
+import { Topic } from 'aws-cdk-lib/aws-sns';
 import { Construct } from 'constructs';
-import { EventBridgeEmailNotifier } from 'eventbridge-email-notifier';
+import { EventEmailNotifier } from 'event-email-notifier';
 
 class NotifierStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
 
-    const topic = new sns.Topic(this, 'AlertTopic');
-    const rule = new events.Rule(this, 'PipelineRule', {
+    const topic = new Topic(this, 'AlertTopic');
+    const rule = new Rule(this, 'PipelineRule', {
       eventPattern: {
         source: ['aws.codepipeline'],
       },
     });
 
-    rule.addTarget(new EventBridgeEmailNotifier(topic, {
+    rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Pipeline failed',
     }));
   }
@@ -95,16 +95,18 @@ Deploy checklist:
 ### Subject from the event
 
 ```typescript
-rule.addTarget(new EventBridgeEmailNotifier(topic, {
-  subject: events.EventField.fromPath('$.detail.state'),
-  message: events.RuleTargetInput.fromObject({
-    pipeline: events.EventField.fromPath('$.detail.pipeline'),
-    state: events.EventField.fromPath('$.detail.state'),
+import { EventField, RuleTargetInput } from 'aws-cdk-lib/aws-events';
+
+rule.addTarget(new EventEmailNotifier(topic, {
+  subject: EventField.fromPath('$.detail.state'),
+  message: RuleTargetInput.fromObject({
+    pipeline: EventField.fromPath('$.detail.pipeline'),
+    state: EventField.fromPath('$.detail.state'),
   }),
 }));
 ```
 
-`events.RuleTargetInput.fromEventPath('$.detail.state')` sets the same kind of subject. `events.RuleTargetInput.fromText('Pipeline failed')` sets a static subject.
+`RuleTargetInput.fromEventPath('$.detail.state')` sets the same kind of subject. `RuleTargetInput.fromText('Pipeline failed')` sets a static subject.
 
 ## Options
 

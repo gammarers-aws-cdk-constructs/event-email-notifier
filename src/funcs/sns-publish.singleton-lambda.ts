@@ -3,7 +3,6 @@ import { NodeHttpHandler } from '@smithy/node-http-handler';
 import { quietStringify } from 'quiet-json-parser';
 import {
   SNS_CLIENT_CONNECTION_TIMEOUT_MS,
-  SNS_CLIENT_MAX_ATTEMPTS,
   SNS_CLIENT_REQUEST_TIMEOUT_MS,
 } from '../settings/consts';
 import { parsePublishRequest } from './core/parse-publish-request';
@@ -11,7 +10,6 @@ import { sanitizeSnsSubject } from './core/sanitize-sns-subject';
 
 // Region comes from the Lambda environment. HTTP timeouts stay inside the function timeout across retries.
 const sns = new SNSClient({
-  maxAttempts: SNS_CLIENT_MAX_ATTEMPTS,
   requestHandler: new NodeHttpHandler({
     connectionTimeout: SNS_CLIENT_CONNECTION_TIMEOUT_MS,
     requestTimeout: SNS_CLIENT_REQUEST_TIMEOUT_MS,
@@ -45,7 +43,10 @@ export const toSnsMessage = (event: unknown): string => {
  * The subject is sanitized to SNS limits before Publish.
  *
  * @param event - Payload EventBridge passed to the function
- * @throws Error when the payload is missing `topicArn`, `subject`, or `message`, or the subject is empty after sanitization
+ * @throws Error when the event is not an object with `topicArn`, `subject`, and `message`
+ * @throws Error when `topicArn` is missing, empty, or not a string
+ * @throws Error when `subject` is not a string, or is empty after sanitization
+ * @throws Error when `message` is missing
  */
 export const handler = async (event: unknown): Promise<void> => {
   const request = parsePublishRequest(event);
@@ -53,7 +54,7 @@ export const handler = async (event: unknown): Promise<void> => {
 
   if (subject.length === 0) {
     throw new Error(
-      'subject must contain at least one non-control character after sanitization',
+      `subject is ${JSON.stringify(request.subject)}, expected at least one non-control character after sanitization`,
     );
   }
 

@@ -3,31 +3,31 @@
 
 ## Structs <a name="Structs" id="Structs"></a>
 
-### EventBridgeEmailNotifierProps <a name="EventBridgeEmailNotifierProps" id="eventbridge-email-notifier.EventBridgeEmailNotifierProps"></a>
+### EventEmailNotifierProps <a name="EventEmailNotifierProps" id="event-email-notifier.EventEmailNotifierProps"></a>
 
-Properties for {@link EventBridgeEmailNotifier}.
+Properties for {@link EventEmailNotifier}.
 
-#### Initializer <a name="Initializer" id="eventbridge-email-notifier.EventBridgeEmailNotifierProps.Initializer"></a>
+#### Initializer <a name="Initializer" id="event-email-notifier.EventEmailNotifierProps.Initializer"></a>
 
 ```typescript
-import { EventBridgeEmailNotifierProps } from 'eventbridge-email-notifier'
+import { EventEmailNotifierProps } from 'event-email-notifier'
 
-const eventBridgeEmailNotifierProps: EventBridgeEmailNotifierProps = { ... }
+const eventEmailNotifierProps: EventEmailNotifierProps = { ... }
 ```
 
 #### Properties <a name="Properties" id="Properties"></a>
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#eventbridge-email-notifier.EventBridgeEmailNotifierProps.property.subject">subject</a></code> | <code>string \| aws-cdk-lib.aws_events.RuleTargetInput</code> | Email subject used when publishing to SNS. |
-| <code><a href="#eventbridge-email-notifier.EventBridgeEmailNotifierProps.property.deadLetterQueue">deadLetterQueue</a></code> | <code>aws-cdk-lib.aws_sqs.IQueue</code> | SQS queue used as the EventBridge target dead-letter queue. |
-| <code><a href="#eventbridge-email-notifier.EventBridgeEmailNotifierProps.property.maxEventAge">maxEventAge</a></code> | <code>aws-cdk-lib.Duration</code> | Maximum age of an event for EventBridge retries to this target. |
-| <code><a href="#eventbridge-email-notifier.EventBridgeEmailNotifierProps.property.message">message</a></code> | <code>aws-cdk-lib.aws_events.RuleTargetInput</code> | Message body published to SNS. |
-| <code><a href="#eventbridge-email-notifier.EventBridgeEmailNotifierProps.property.retryAttempts">retryAttempts</a></code> | <code>number</code> | Maximum number of EventBridge retry attempts for this target. |
+| <code><a href="#event-email-notifier.EventEmailNotifierProps.property.subject">subject</a></code> | <code>string \| aws-cdk-lib.aws_events.RuleTargetInput</code> | Email subject used when publishing to SNS. |
+| <code><a href="#event-email-notifier.EventEmailNotifierProps.property.deadLetterQueue">deadLetterQueue</a></code> | <code>aws-cdk-lib.aws_sqs.IQueue</code> | SQS queue used as the EventBridge target dead-letter queue. |
+| <code><a href="#event-email-notifier.EventEmailNotifierProps.property.maxEventAge">maxEventAge</a></code> | <code>aws-cdk-lib.Duration</code> | Maximum age of an event for EventBridge retries to this target. |
+| <code><a href="#event-email-notifier.EventEmailNotifierProps.property.message">message</a></code> | <code>aws-cdk-lib.aws_events.RuleTargetInput</code> | Message body published to SNS. |
+| <code><a href="#event-email-notifier.EventEmailNotifierProps.property.retryAttempts">retryAttempts</a></code> | <code>number</code> | Maximum number of EventBridge retry attempts for this target. |
 
 ---
 
-##### `subject`<sup>Required</sup> <a name="subject" id="eventbridge-email-notifier.EventBridgeEmailNotifierProps.property.subject"></a>
+##### `subject`<sup>Required</sup> <a name="subject" id="event-email-notifier.EventEmailNotifierProps.property.subject"></a>
 
 ```typescript
 public readonly subject: string | RuleTargetInput;
@@ -49,7 +49,7 @@ The value that reaches the Lambda must be a string. An object fails that invocat
 
 ---
 
-##### `deadLetterQueue`<sup>Optional</sup> <a name="deadLetterQueue" id="eventbridge-email-notifier.EventBridgeEmailNotifierProps.property.deadLetterQueue"></a>
+##### `deadLetterQueue`<sup>Optional</sup> <a name="deadLetterQueue" id="event-email-notifier.EventEmailNotifierProps.property.deadLetterQueue"></a>
 
 ```typescript
 public readonly deadLetterQueue: IQueue;
@@ -66,7 +66,7 @@ account needs that permission on the queue policy.
 
 ---
 
-##### `maxEventAge`<sup>Optional</sup> <a name="maxEventAge" id="eventbridge-email-notifier.EventBridgeEmailNotifierProps.property.maxEventAge"></a>
+##### `maxEventAge`<sup>Optional</sup> <a name="maxEventAge" id="event-email-notifier.EventEmailNotifierProps.property.maxEventAge"></a>
 
 ```typescript
 public readonly maxEventAge: Duration;
@@ -79,7 +79,7 @@ Maximum age of an event for EventBridge retries to this target.
 
 ---
 
-##### `message`<sup>Optional</sup> <a name="message" id="eventbridge-email-notifier.EventBridgeEmailNotifierProps.property.message"></a>
+##### `message`<sup>Optional</sup> <a name="message" id="event-email-notifier.EventEmailNotifierProps.property.message"></a>
 
 ```typescript
 public readonly message: RuleTargetInput;
@@ -95,7 +95,7 @@ Strings are published as-is. Other values are JSON-serialized.
 
 ---
 
-##### `retryAttempts`<sup>Optional</sup> <a name="retryAttempts" id="eventbridge-email-notifier.EventBridgeEmailNotifierProps.property.retryAttempts"></a>
+##### `retryAttempts`<sup>Optional</sup> <a name="retryAttempts" id="event-email-notifier.EventEmailNotifierProps.property.retryAttempts"></a>
 
 ```typescript
 public readonly retryAttempts: number;
@@ -110,7 +110,7 @@ Maximum number of EventBridge retry attempts for this target.
 
 ## Classes <a name="Classes" id="Classes"></a>
 
-### EventBridgeEmailNotifier <a name="EventBridgeEmailNotifier" id="eventbridge-email-notifier.EventBridgeEmailNotifier"></a>
+### EventEmailNotifier <a name="EventEmailNotifier" id="event-email-notifier.EventEmailNotifier"></a>
 
 - *Implements:* aws-cdk-lib.aws_events.IRuleTarget
 
@@ -134,29 +134,29 @@ This target does not change the topic resource policy.
 *Example*
 
 ```typescript
-rule.addTarget(new EventBridgeEmailNotifier(topic, {
+rule.addTarget(new EventEmailNotifier(topic, {
   subject: 'Pipeline failed',
   message: events.RuleTargetInput.fromText('Check CodePipeline'),
 }));
 ```
 
 
-#### Initializers <a name="Initializers" id="eventbridge-email-notifier.EventBridgeEmailNotifier.Initializer"></a>
+#### Initializers <a name="Initializers" id="event-email-notifier.EventEmailNotifier.Initializer"></a>
 
 ```typescript
-import { EventBridgeEmailNotifier } from 'eventbridge-email-notifier'
+import { EventEmailNotifier } from 'event-email-notifier'
 
-new EventBridgeEmailNotifier(topic: ITopic, props: EventBridgeEmailNotifierProps)
+new EventEmailNotifier(topic: ITopic, props: EventEmailNotifierProps)
 ```
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#eventbridge-email-notifier.EventBridgeEmailNotifier.Initializer.parameter.topic">topic</a></code> | <code>aws-cdk-lib.aws_sns.ITopic</code> | - SNS topic used for email delivery. |
-| <code><a href="#eventbridge-email-notifier.EventBridgeEmailNotifier.Initializer.parameter.props">props</a></code> | <code><a href="#eventbridge-email-notifier.EventBridgeEmailNotifierProps">EventBridgeEmailNotifierProps</a></code> | - Subject, message, and EventBridge retry / DLQ options. |
+| <code><a href="#event-email-notifier.EventEmailNotifier.Initializer.parameter.topic">topic</a></code> | <code>aws-cdk-lib.aws_sns.ITopic</code> | - SNS topic used for email delivery. |
+| <code><a href="#event-email-notifier.EventEmailNotifier.Initializer.parameter.props">props</a></code> | <code><a href="#event-email-notifier.EventEmailNotifierProps">EventEmailNotifierProps</a></code> | - Subject, message, and EventBridge retry / DLQ options. |
 
 ---
 
-##### `topic`<sup>Required</sup> <a name="topic" id="eventbridge-email-notifier.EventBridgeEmailNotifier.Initializer.parameter.topic"></a>
+##### `topic`<sup>Required</sup> <a name="topic" id="event-email-notifier.EventEmailNotifier.Initializer.parameter.topic"></a>
 
 - *Type:* aws-cdk-lib.aws_sns.ITopic
 
@@ -164,9 +164,9 @@ SNS topic used for email delivery.
 
 ---
 
-##### `props`<sup>Required</sup> <a name="props" id="eventbridge-email-notifier.EventBridgeEmailNotifier.Initializer.parameter.props"></a>
+##### `props`<sup>Required</sup> <a name="props" id="event-email-notifier.EventEmailNotifier.Initializer.parameter.props"></a>
 
-- *Type:* <a href="#eventbridge-email-notifier.EventBridgeEmailNotifierProps">EventBridgeEmailNotifierProps</a>
+- *Type:* <a href="#event-email-notifier.EventEmailNotifierProps">EventEmailNotifierProps</a>
 
 Subject, message, and EventBridge retry / DLQ options.
 
@@ -176,11 +176,11 @@ Subject, message, and EventBridge retry / DLQ options.
 
 | **Name** | **Description** |
 | --- | --- |
-| <code><a href="#eventbridge-email-notifier.EventBridgeEmailNotifier.bind">bind</a></code> | Bind this notifier as an EventBridge rule target (Lambda → SNS Publish). |
+| <code><a href="#event-email-notifier.EventEmailNotifier.bind">bind</a></code> | Bind this notifier as an EventBridge rule target (Lambda → SNS Publish). |
 
 ---
 
-##### `bind` <a name="bind" id="eventbridge-email-notifier.EventBridgeEmailNotifier.bind"></a>
+##### `bind` <a name="bind" id="event-email-notifier.EventEmailNotifier.bind"></a>
 
 ```typescript
 public bind(rule: IRuleRef, id?: string): RuleTargetConfig
@@ -193,7 +193,7 @@ The publisher Lambda is a CDK singleton function, shared per stack by a
 fixed uuid. Each bind declares it under the rule, named after the target
 `id`; that declaration does not add a resource.
 
-###### `rule`<sup>Required</sup> <a name="rule" id="eventbridge-email-notifier.EventBridgeEmailNotifier.bind.parameter.rule"></a>
+###### `rule`<sup>Required</sup> <a name="rule" id="event-email-notifier.EventEmailNotifier.bind.parameter.rule"></a>
 
 - *Type:* aws-cdk-lib.interfaces.aws_events.IRuleRef
 
@@ -201,7 +201,7 @@ Rule that will invoke the publisher Lambda.
 
 ---
 
-###### `id`<sup>Optional</sup> <a name="id" id="eventbridge-email-notifier.EventBridgeEmailNotifier.bind.parameter.id"></a>
+###### `id`<sup>Optional</sup> <a name="id" id="event-email-notifier.EventEmailNotifier.bind.parameter.id"></a>
 
 - *Type:* string
 

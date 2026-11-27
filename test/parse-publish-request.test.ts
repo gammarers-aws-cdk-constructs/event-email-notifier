@@ -64,6 +64,6 @@ describe('parsePublishRequest', () => {
       [PUBLISH_TOPIC_ARN_FIELD]: topicArn,
       [PUBLISH_SUBJECT_FIELD]: { state: 'FAILED' },
       [PUBLISH_MESSAGE_FIELD]: 'body',
-    })).toThrow(/subject must be a string/);
+    })).toThrow(/subject is \{"state":"FAILED"\}, expected a string/);
   });
 });
