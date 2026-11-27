@@ -52,8 +52,8 @@ pnpm add event-email-notifier
 
 ```typescript
 import { App, Stack, type StackProps } from 'aws-cdk-lib';
-import * as events from 'aws-cdk-lib/aws-events';
-import * as sns from 'aws-cdk-lib/aws-sns';
+import { Rule } from 'aws-cdk-lib/aws-events';
+import { Topic } from 'aws-cdk-lib/aws-sns';
 import { Construct } from 'constructs';
 import { EventEmailNotifier } from 'event-email-notifier';
 
@@ -61,8 +61,8 @@ class NotifierStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
 
-    const topic = new sns.Topic(this, 'AlertTopic');
-    const rule = new events.Rule(this, 'PipelineRule', {
+    const topic = new Topic(this, 'AlertTopic');
+    const rule = new Rule(this, 'PipelineRule', {
       eventPattern: {
         source: ['aws.codepipeline'],
       },
@@ -95,16 +95,18 @@ Deploy checklist:
 ### Subject from the event
 
 ```typescript
+import { EventField, RuleTargetInput } from 'aws-cdk-lib/aws-events';
+
 rule.addTarget(new EventEmailNotifier(topic, {
-  subject: events.EventField.fromPath('$.detail.state'),
-  message: events.RuleTargetInput.fromObject({
-    pipeline: events.EventField.fromPath('$.detail.pipeline'),
-    state: events.EventField.fromPath('$.detail.state'),
+  subject: EventField.fromPath('$.detail.state'),
+  message: RuleTargetInput.fromObject({
+    pipeline: EventField.fromPath('$.detail.pipeline'),
+    state: EventField.fromPath('$.detail.state'),
   }),
 }));
 ```
 
-`events.RuleTargetInput.fromEventPath('$.detail.state')` sets the same kind of subject. `events.RuleTargetInput.fromText('Pipeline failed')` sets a static subject.
+`RuleTargetInput.fromEventPath('$.detail.state')` sets the same kind of subject. `RuleTargetInput.fromText('Pipeline failed')` sets a static subject.
 
 ## Options
 

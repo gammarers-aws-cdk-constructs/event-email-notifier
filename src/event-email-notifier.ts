@@ -1,9 +1,17 @@
 import { Duration, Names, Stack, Token, TokenComparison, Tokenization } from 'aws-cdk-lib';
-import * as events from 'aws-cdk-lib/aws-events';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import type * as sns from 'aws-cdk-lib/aws-sns';
-import type * as sqs from 'aws-cdk-lib/aws-sqs';
+import {
+  CfnRule,
+  EventField,
+  RuleTargetInput,
+  type IRuleRef,
+  type IRuleTarget,
+  type RuleTargetConfig,
+  type RuleTargetInputProperties,
+} from 'aws-cdk-lib/aws-events';
+import { Effect, PolicyStatement, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import type { IFunction } from 'aws-cdk-lib/aws-lambda';
+import type { ITopic } from 'aws-cdk-lib/aws-sns';
+import type { IQueue } from 'aws-cdk-lib/aws-sqs';
 import { Construct, type Node } from 'constructs';
 import { SnsPublishFunction } from './funcs/sns-publish-function';
 import {
@@ -42,7 +50,7 @@ export interface EventEmailNotifierProps {
    * `events.RuleTargetInput.fromText` sets a static subject.
    * The value that reaches the Lambda must be a string. An object fails that invocation.
    */
-  readonly subject: string | events.RuleTargetInput;
+  readonly subject: string | RuleTargetInput;
 
   /**
    * Message body published to SNS.
@@ -52,7 +60,7 @@ export interface EventEmailNotifierProps {
    *
    * @default the entire EventBridge event
    */
-  readonly message?: events.RuleTargetInput;
+  readonly message?: RuleTargetInput;
 
   /**
    * SQS queue used as the EventBridge target dead-letter queue.
@@ -63,7 +71,7 @@ export interface EventEmailNotifierProps {
    *
    * @default - no dead-letter queue
    */
-  readonly deadLetterQueue?: sqs.IQueue;
+  readonly deadLetterQueue?: IQueue;
 
   /**
    * Maximum age of an event for EventBridge retries to this target.
@@ -118,8 +126,8 @@ export const sanitizeSnsSubject = (subject: string): string => {
  *   message: events.RuleTargetInput.fromText('Check CodePipeline'),
  * }));
  */
-export class EventEmailNotifier implements events.IRuleTarget {
-  private readonly topic: sns.ITopic;
+export class EventEmailNotifier implements IRuleTarget {
+  private readonly topic: ITopic;
   private readonly props: EventEmailNotifierProps;
 
   /**
@@ -127,7 +135,7 @@ export class EventEmailNotifier implements events.IRuleTarget {
    * @param props - Subject, message, and EventBridge retry / DLQ options
    * @throws Error when a string subject is empty after sanitization, or is an unresolved token that is not an event path
    */
-  constructor(topic: sns.ITopic, props: EventEmailNotifierProps) {
+  constructor(topic: ITopic, props: EventEmailNotifierProps) {
     this.topic = topic;
     this.props = props;
     ensureSubjectAtConstruction(props.subject);
@@ -149,7 +157,7 @@ export class EventEmailNotifier implements events.IRuleTarget {
    * @throws Error when the subject and message reuse an input path key for different paths
    * @throws Error when `deadLetterQueue` is in a different region from the rule
    */
-  public bind(rule: events.IRuleRef, id?: string): events.RuleTargetConfig {
+  public bind(rule: IRuleRef, id?: string): RuleTargetConfig {
     const subject = resolveSubject(rule, this.topic, this.props.subject);
     const handler = publisherFunction(rule, this.topic, id);
     grantTopicPublish(handler, this.topic);
@@ -176,15 +184,15 @@ interface InputFragment {
 /**
  * Target input `{ topicArn, subject, message }` for the publisher Lambda.
  */
-class PublisherEventInput extends events.RuleTargetInput {
-  private readonly topic: sns.ITopic;
-  private readonly subject: events.RuleTargetInput;
-  private readonly message: events.RuleTargetInput | undefined;
+class PublisherEventInput extends RuleTargetInput {
+  private readonly topic: ITopic;
+  private readonly subject: RuleTargetInput;
+  private readonly message: RuleTargetInput | undefined;
 
   constructor(
-    topic: sns.ITopic,
-    subject: events.RuleTargetInput,
-    message: events.RuleTargetInput | undefined,
+    topic: ITopic,
+    subject: RuleTargetInput,
+    message: RuleTargetInput | undefined,
   ) {
     super();
     this.topic = topic;
@@ -192,7 +200,7 @@ class PublisherEventInput extends events.RuleTargetInput {
     this.message = message;
   }
 
-  public bind(rule: events.IRuleRef): events.RuleTargetInputProperties {
+  public bind(rule: IRuleRef): RuleTargetInputProperties {
     return bindPublisherInput(rule, this.topic, this.subject, this.message);
   }
 }
@@ -200,7 +208,7 @@ class PublisherEventInput extends events.RuleTargetInput {
 /**
  * Reject string subjects that cannot be checked at construction.
  */
-const ensureSubjectAtConstruction = (subject: string | events.RuleTargetInput): void => {
+const ensureSubjectAtConstruction = (subject: string | RuleTargetInput): void => {
   if (typeof subject !== 'string') {
     return;
   }
@@ -232,14 +240,14 @@ const ensureStaticSubject = (subject: string): void => {
  */
 const eventFieldPath = (value: string): string | undefined => {
   const resolvable = Tokenization.reverse(value, { failConcat: false });
-  if (!(resolvable instanceof events.EventField)) {
+  if (!(resolvable instanceof EventField)) {
     return undefined;
   }
 
   return resolvable.path;
 };
 
-const textSubject = (subject: string): events.RuleTargetInput => {
+const textSubject = (subject: string): RuleTargetInput => {
   const sanitized = sanitizeSnsSubject(subject);
   if (sanitized.length === 0) {
     throw new Error(
@@ -247,11 +255,11 @@ const textSubject = (subject: string): events.RuleTargetInput => {
     );
   }
 
-  return events.RuleTargetInput.fromText(sanitized);
+  return RuleTargetInput.fromText(sanitized);
 };
 
-const pathSubject = (path: string): events.RuleTargetInput => {
-  return events.RuleTargetInput.fromEventPath(path);
+const pathSubject = (path: string): RuleTargetInput => {
+  return RuleTargetInput.fromEventPath(path);
 };
 
 /**
@@ -261,10 +269,10 @@ const pathSubject = (path: string): events.RuleTargetInput => {
  * a path so the Lambda sees the value extracted at delivery time.
  */
 const resolveSubject = (
-  rule: events.IRuleRef,
-  topic: sns.ITopic,
-  subject: string | events.RuleTargetInput,
-): events.RuleTargetInput => {
+  rule: IRuleRef,
+  topic: ITopic,
+  subject: string | RuleTargetInput,
+): RuleTargetInput => {
   if (typeof subject === 'string') {
     const path = eventFieldPath(subject);
     if (path !== undefined) {
@@ -329,11 +337,11 @@ const loneEventPath = (
  * quote strings and embed objects. Literal text is already JSON.
  */
 const bindPublisherInput = (
-  rule: events.IRuleRef,
-  topic: sns.ITopic,
-  subject: events.RuleTargetInput,
-  message: events.RuleTargetInput | undefined,
-): events.RuleTargetInputProperties => {
+  rule: IRuleRef,
+  topic: ITopic,
+  subject: RuleTargetInput,
+  message: RuleTargetInput | undefined,
+): RuleTargetInputProperties => {
   const stack = resolutionStack(rule, topic);
   const subjectFragment = sanitizeConstantSubjectFragment(
     bindInputFragment(rule, stack, subject, PUBLISH_SUBJECT_FIELD),
@@ -367,9 +375,9 @@ const bindPublisherInput = (
  * Turn one subject or message input into a JSON fragment and its path map.
  */
 const bindInputFragment = (
-  rule: events.IRuleRef,
+  rule: IRuleRef,
   stack: Stack,
-  input: events.RuleTargetInput,
+  input: RuleTargetInput,
   fieldName: string,
 ): InputFragment => {
   const bound = input.bind(rule);
@@ -505,7 +513,7 @@ const parseJsonValue = (json: string): unknown => {
 /**
  * Stack that owns the publisher. Use the rule's stack when the rule is a construct.
  */
-const resolutionStack = (rule: events.IRuleRef, topic: sns.ITopic): Stack => {
+const resolutionStack = (rule: IRuleRef, topic: ITopic): Stack => {
   if (Construct.isConstruct(rule)) {
     return Stack.of(rule);
   }
@@ -522,10 +530,10 @@ const publisherDeclarations = new WeakMap<Stack, number>();
  * own construct id; that wrapper does not create a resource.
  */
 const publisherFunction = (
-  rule: events.IRuleRef,
-  topic: sns.ITopic,
+  rule: IRuleRef,
+  topic: ITopic,
   targetId: string | undefined,
-): lambda.IFunction => {
+): IFunction => {
   const props = {
     description: 'Publish EventBridge events to SNS with a custom email subject',
     lambdaPurpose: PUBLISHER_LAMBDA_PURPOSE,
@@ -552,7 +560,7 @@ const publisherDeclarationId = (stack: Stack): string => {
 /**
  * Grant sns:Publish once per topic. The singleton role accumulates one statement per topic.
  */
-const grantTopicPublish = (handler: lambda.IFunction, topic: sns.ITopic): void => {
+const grantTopicPublish = (handler: IFunction, topic: ITopic): void => {
   const granted = grantedTopicArns.get(handler.permissionsNode) ?? new Set<string>();
   grantedTopicArns.set(handler.permissionsNode, granted);
   if (granted.has(topic.topicArn)) {
@@ -567,8 +575,8 @@ const grantTopicPublish = (handler: lambda.IFunction, topic: sns.ITopic): void =
  * Allow EventBridge to invoke the publisher Lambda for this rule.
  */
 const addLambdaInvokePermission = (
-  rule: events.IRuleRef,
-  handler: lambda.IFunction,
+  rule: IRuleRef,
+  handler: IFunction,
 ): void => {
   let scope: Construct | undefined;
   let node = handler.permissionsNode;
@@ -587,15 +595,15 @@ const addLambdaInvokePermission = (
   handler.addPermission(permissionId, {
     scope,
     action: 'lambda:InvokeFunction',
-    principal: new iam.ServicePrincipal('events.amazonaws.com'),
-    sourceArn: events.CfnRule.arnForRule(rule),
+    principal: new ServicePrincipal('events.amazonaws.com'),
+    sourceArn: CfnRule.arnForRule(rule),
   });
 };
 
 /**
  * Allow EventBridge to send failed invocations to the DLQ when same-account.
  */
-const addDeadLetterQueuePolicy = (rule: events.IRuleRef, queue: sqs.IQueue): void => {
+const addDeadLetterQueuePolicy = (rule: IRuleRef, queue: IQueue): void => {
   if (!sameEnvDimension(rule.env.region, queue.env.region)) {
     throw new Error(
       `Cannot assign Dead Letter Queue in region ${queue.env.region} to the rule ` +
@@ -609,15 +617,15 @@ const addDeadLetterQueuePolicy = (rule: events.IRuleRef, queue: sqs.IQueue): voi
   }
 
   const policyStatementId = `AllowEventRule${Names.nodeUniqueId(rule.node)}`;
-  queue.addToResourcePolicy(new iam.PolicyStatement({
+  queue.addToResourcePolicy(new PolicyStatement({
     sid: policyStatementId,
-    principals: [new iam.ServicePrincipal('events.amazonaws.com')],
-    effect: iam.Effect.ALLOW,
+    principals: [new ServicePrincipal('events.amazonaws.com')],
+    effect: Effect.ALLOW,
     actions: ['sqs:SendMessage'],
     resources: [queue.queueArn],
     conditions: {
       ArnEquals: {
-        'aws:SourceArn': events.CfnRule.arnForRule(rule),
+        'aws:SourceArn': CfnRule.arnForRule(rule),
       },
     },
   }));
@@ -628,7 +636,7 @@ const addDeadLetterQueuePolicy = (rule: events.IRuleRef, queue: sqs.IQueue): voi
  */
 const bindRetryAndDlqConfig = (
   props: EventEmailNotifierProps,
-): Pick<events.RuleTargetConfig, 'deadLetterConfig' | 'retryPolicy'> => {
+): Pick<RuleTargetConfig, 'deadLetterConfig' | 'retryPolicy'> => {
   const { deadLetterQueue, retryAttempts, maxEventAge } = props;
   const hasRetryPolicy = (retryAttempts !== undefined && retryAttempts >= 0)
     || maxEventAge !== undefined;

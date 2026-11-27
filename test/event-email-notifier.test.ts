@@ -1,8 +1,14 @@
 import { App, Duration, Lazy, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import * as events from 'aws-cdk-lib/aws-events';
-import * as sns from 'aws-cdk-lib/aws-sns';
-import * as sqs from 'aws-cdk-lib/aws-sqs';
+import {
+  EventField,
+  Rule,
+  RuleTargetInput,
+  type IRuleRef,
+  type RuleTargetInputProperties,
+} from 'aws-cdk-lib/aws-events';
+import { Topic, type ITopic } from 'aws-cdk-lib/aws-sns';
+import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import { EventEmailNotifier } from '../src';
 import { PUBLISHER_TIMEOUT_SECONDS } from '../src/settings/consts';
@@ -13,8 +19,8 @@ const REMOVED_TOPIC_ARN_ENV = 'TOPIC_ARN';
 const createStackWithRule = () => {
   const app = new App();
   const stack = new Stack(app, 'TestStack');
-  const topic = new sns.Topic(stack, 'Topic');
-  const rule = new events.Rule(stack, 'Rule', {
+  const topic = new Topic(stack, 'Topic');
+  const rule = new Rule(stack, 'Rule', {
     eventPattern: {
       source: ['aws.codepipeline'],
     },
@@ -22,25 +28,25 @@ const createStackWithRule = () => {
   return { stack, topic, rule };
 };
 
-class TargetInput extends events.RuleTargetInput {
-  public constructor(private readonly properties: events.RuleTargetInputProperties) {
+class TargetInput extends RuleTargetInput {
+  public constructor(private readonly properties: RuleTargetInputProperties) {
     super();
   }
 
-  public bind(): events.RuleTargetInputProperties {
+  public bind(): RuleTargetInputProperties {
     return this.properties;
   }
 }
 
-class TopicPathInput extends events.RuleTargetInput {
+class TopicPathInput extends RuleTargetInput {
   public constructor(
-    private readonly topic: sns.ITopic,
+    private readonly topic: ITopic,
     private readonly path: string,
   ) {
     super();
   }
 
-  public bind(rule: events.IRuleRef): events.RuleTargetInputProperties {
+  public bind(rule: IRuleRef): RuleTargetInputProperties {
     const stack = Construct.isConstruct(rule) ? Stack.of(rule) : Stack.of(this.topic);
 
     return {
@@ -189,7 +195,7 @@ describe('EventEmailNotifier', () => {
 
     rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Pipeline failed',
-      message: events.RuleTargetInput.fromText('Check the pipeline'),
+      message: RuleTargetInput.fromText('Check the pipeline'),
     }));
 
     const template = Template.fromStack(stack);
@@ -213,10 +219,10 @@ describe('EventEmailNotifier', () => {
     expect(payload).toContain('<aws.events.event.json>');
   });
 
-  test.each<[string, string | events.RuleTargetInput]>([
-    ['an event field', events.EventField.fromPath('$.detail.state')],
-    ['an event path', events.RuleTargetInput.fromEventPath('$.detail.state')],
-    ['text that contains an event field', events.RuleTargetInput.fromText(events.EventField.fromPath('$.detail.state'))],
+  test.each<[string, string | RuleTargetInput]>([
+    ['an event field', EventField.fromPath('$.detail.state')],
+    ['an event path', RuleTargetInput.fromEventPath('$.detail.state')],
+    ['text that contains an event field', RuleTargetInput.fromText(EventField.fromPath('$.detail.state'))],
   ])('reads the subject from %s', (_label, subject) => {
     const { stack, topic, rule } = createStackWithRule();
 
@@ -233,7 +239,7 @@ describe('EventEmailNotifier', () => {
     const { stack, topic, rule } = createStackWithRule();
 
     rule.addTarget(new EventEmailNotifier(topic, {
-      subject: events.RuleTargetInput.fromObject({
+      subject: RuleTargetInput.fromObject({
         text: 'hello',
       }),
     }));
@@ -245,8 +251,8 @@ describe('EventEmailNotifier', () => {
     const { stack, topic, rule } = createStackWithRule();
 
     rule.addTarget(new EventEmailNotifier(topic, {
-      subject: events.RuleTargetInput.fromObject({
-        state: events.EventField.fromPath('$.detail.state'),
+      subject: RuleTargetInput.fromObject({
+        state: EventField.fromPath('$.detail.state'),
       }),
     }));
 
@@ -259,9 +265,9 @@ describe('EventEmailNotifier', () => {
     const { stack, topic, rule } = createStackWithRule();
 
     rule.addTarget(new EventEmailNotifier(topic, {
-      subject: events.RuleTargetInput.fromObject({
-        state: events.EventField.fromPath('$.detail.state'),
-        pipeline: events.EventField.fromPath('$.detail.pipeline'),
+      subject: RuleTargetInput.fromObject({
+        state: EventField.fromPath('$.detail.state'),
+        pipeline: EventField.fromPath('$.detail.pipeline'),
       }),
     }));
 
@@ -277,9 +283,9 @@ describe('EventEmailNotifier', () => {
 
     rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Pipeline failed',
-      message: events.RuleTargetInput.fromObject({
-        pipeline: events.EventField.fromPath('$.detail.pipeline'),
-        state: events.EventField.fromPath('$.detail.state'),
+      message: RuleTargetInput.fromObject({
+        pipeline: EventField.fromPath('$.detail.pipeline'),
+        state: EventField.fromPath('$.detail.state'),
       }),
     }));
 
@@ -308,7 +314,7 @@ describe('EventEmailNotifier', () => {
     const { stack, topic, rule } = createStackWithRule();
 
     rule.addTarget(new EventEmailNotifier(topic, {
-      subject: events.RuleTargetInput.fromText(`Alert\n${'x'.repeat(120)}`),
+      subject: RuleTargetInput.fromText(`Alert\n${'x'.repeat(120)}`),
     }));
 
     const payload = targetPayloadText(Template.fromStack(stack));
@@ -330,7 +336,7 @@ describe('EventEmailNotifier', () => {
 
     expect(() => {
       new EventEmailNotifier(topic, {
-        subject: events.RuleTargetInput.fromText('\n'),
+        subject: RuleTargetInput.fromText('\n'),
       }).bind(rule);
     }).toThrow(/non-control character/);
   });
@@ -350,11 +356,11 @@ describe('EventEmailNotifier', () => {
 
     rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'First subject',
-      message: events.RuleTargetInput.fromText('first'),
+      message: RuleTargetInput.fromText('first'),
     }));
     rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Second subject',
-      message: events.RuleTargetInput.fromText('second'),
+      message: RuleTargetInput.fromText('second'),
     }));
 
     const template = Template.fromStack(stack);
@@ -382,11 +388,11 @@ describe('EventEmailNotifier', () => {
 
     rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Same subject',
-      message: events.RuleTargetInput.fromText('one'),
+      message: RuleTargetInput.fromText('one'),
     }));
     rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Same subject',
-      message: events.RuleTargetInput.fromText('two'),
+      message: RuleTargetInput.fromText('two'),
     }));
 
     const template = Template.fromStack(stack);
@@ -408,12 +414,12 @@ describe('EventEmailNotifier', () => {
     const { stack, topic, rule } = createStackWithRule();
 
     rule.addTarget(new EventEmailNotifier(topic, {
-      subject: events.EventField.fromPath('$.detail.state'),
-      message: events.RuleTargetInput.fromText('one'),
+      subject: EventField.fromPath('$.detail.state'),
+      message: RuleTargetInput.fromText('one'),
     }));
     rule.addTarget(new EventEmailNotifier(topic, {
-      subject: events.RuleTargetInput.fromEventPath('$.detail.state'),
-      message: events.RuleTargetInput.fromText('two'),
+      subject: RuleTargetInput.fromEventPath('$.detail.state'),
+      message: RuleTargetInput.fromText('two'),
     }));
 
     const template = Template.fromStack(stack);
@@ -430,15 +436,15 @@ describe('EventEmailNotifier', () => {
 
   test('uses one Lambda for the same subject on different topics', () => {
     const { stack, topic, rule } = createStackWithRule();
-    const other = new sns.Topic(stack, 'OtherTopic');
+    const other = new Topic(stack, 'OtherTopic');
 
     rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'Same subject',
-      message: events.RuleTargetInput.fromText('one'),
+      message: RuleTargetInput.fromText('one'),
     }));
     rule.addTarget(new EventEmailNotifier(other, {
       subject: 'Same subject',
-      message: events.RuleTargetInput.fromText('two'),
+      message: RuleTargetInput.fromText('two'),
     }));
 
     const template = Template.fromStack(stack);
@@ -466,7 +472,7 @@ describe('EventEmailNotifier', () => {
 
   test('uses one publisher for every rule in the stack', () => {
     const { stack, topic, rule } = createStackWithRule();
-    const other = new events.Rule(stack, 'OtherRule', {
+    const other = new Rule(stack, 'OtherRule', {
       eventPattern: { source: ['aws.codepipeline'] },
     });
 
@@ -499,17 +505,17 @@ describe('EventEmailNotifier', () => {
     const app = new App();
     const left = new Stack(app, 'Left');
     const right = new Stack(app, 'Right');
-    const leftRule = new events.Rule(left, 'Rule', {
+    const leftRule = new Rule(left, 'Rule', {
       eventPattern: { source: ['aws.codepipeline'] },
     });
-    const rightRule = new events.Rule(right, 'Rule', {
+    const rightRule = new Rule(right, 'Rule', {
       eventPattern: { source: ['aws.codepipeline'] },
     });
 
-    leftRule.addTarget(new EventEmailNotifier(new sns.Topic(left, 'Topic'), {
+    leftRule.addTarget(new EventEmailNotifier(new Topic(left, 'Topic'), {
       subject: 'Left subject',
     }));
-    rightRule.addTarget(new EventEmailNotifier(new sns.Topic(right, 'Topic'), {
+    rightRule.addTarget(new EventEmailNotifier(new Topic(right, 'Topic'), {
       subject: 'Right subject',
     }));
 
@@ -519,7 +525,7 @@ describe('EventEmailNotifier', () => {
 
   test('configures EventBridge target DLQ and retry policy', () => {
     const { stack, topic, rule } = createStackWithRule();
-    const dlq = new sqs.Queue(stack, 'Dlq');
+    const dlq = new Queue(stack, 'Dlq');
 
     rule.addTarget(new EventEmailNotifier(topic, {
       subject: 'With retries',
@@ -620,14 +626,14 @@ describe('EventEmailNotifier', () => {
     const away = new Stack(app, 'Away', {
       env: { account: '111111111111', region: 'eu-west-1' },
     });
-    const rule = new events.Rule(stack, 'Rule', {
+    const rule = new Rule(stack, 'Rule', {
       eventPattern: { source: ['aws.codepipeline'] },
     });
 
     expect(() => {
-      rule.addTarget(new EventEmailNotifier(new sns.Topic(stack, 'Topic'), {
+      rule.addTarget(new EventEmailNotifier(new Topic(stack, 'Topic'), {
         subject: 'Region mismatch',
-        deadLetterQueue: new sqs.Queue(away, 'Dlq'),
+        deadLetterQueue: new Queue(away, 'Dlq'),
       }));
     }).toThrow(/same region/);
   });
@@ -640,13 +646,13 @@ describe('EventEmailNotifier', () => {
     const away = new Stack(app, 'Away', {
       env: { account: '222222222222', region: 'us-east-1' },
     });
-    const rule = new events.Rule(stack, 'Rule', {
+    const rule = new Rule(stack, 'Rule', {
       eventPattern: { source: ['aws.codepipeline'] },
     });
 
-    rule.addTarget(new EventEmailNotifier(new sns.Topic(stack, 'Topic'), {
+    rule.addTarget(new EventEmailNotifier(new Topic(stack, 'Topic'), {
       subject: 'Other account',
-      deadLetterQueue: new sqs.Queue(away, 'Dlq', { queueName: 'cross-account-dlq' }),
+      deadLetterQueue: new Queue(away, 'Dlq', { queueName: 'cross-account-dlq' }),
     }));
 
     Template.fromStack(stack).hasResourceProperties('AWS::Events::Rule', {
@@ -667,7 +673,7 @@ describe('EventEmailNotifier', () => {
       ruleRef: {
         ruleArn: 'arn:aws:events:us-east-1:123456789012:rule/example',
       },
-    } as events.IRuleRef;
+    } as IRuleRef;
 
     new EventEmailNotifier(topic, { subject: 'Plain subject' }).bind(ruleRef);
 
@@ -689,7 +695,7 @@ const snapshotCases: readonly SnapshotCase[] = [
     arrange: ({ topic, rule }) => {
       rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'Pipeline failed',
-        message: events.RuleTargetInput.fromText('Check the pipeline'),
+        message: RuleTargetInput.fromText('Check the pipeline'),
       }));
     },
     assert: (template) => {
@@ -703,7 +709,7 @@ const snapshotCases: readonly SnapshotCase[] = [
     lambdaCount: 1,
     arrange: ({ topic, rule }) => {
       rule.addTarget(new EventEmailNotifier(topic, {
-        subject: events.EventField.fromPath('$.detail.state'),
+        subject: EventField.fromPath('$.detail.state'),
       }));
     },
     assert: (template) => {
@@ -718,7 +724,7 @@ const snapshotCases: readonly SnapshotCase[] = [
     arrange: ({ stack, topic, rule }) => {
       rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'With retries',
-        deadLetterQueue: new sqs.Queue(stack, 'Dlq'),
+        deadLetterQueue: new Queue(stack, 'Dlq'),
         retryAttempts: 2,
         maxEventAge: Duration.hours(2),
       }));
@@ -745,11 +751,11 @@ const snapshotCases: readonly SnapshotCase[] = [
     arrange: ({ topic, rule }) => {
       rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'First subject',
-        message: events.RuleTargetInput.fromText('first'),
+        message: RuleTargetInput.fromText('first'),
       }));
       rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'Second subject',
-        message: events.RuleTargetInput.fromText('second'),
+        message: RuleTargetInput.fromText('second'),
       }));
     },
     assert: (template) => {
@@ -768,11 +774,11 @@ const snapshotCases: readonly SnapshotCase[] = [
     arrange: ({ topic, rule }) => {
       rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'Same subject',
-        message: events.RuleTargetInput.fromText('one'),
+        message: RuleTargetInput.fromText('one'),
       }));
       rule.addTarget(new EventEmailNotifier(topic, {
         subject: 'Same subject',
-        message: events.RuleTargetInput.fromText('two'),
+        message: RuleTargetInput.fromText('two'),
       }));
     },
     assert: (template) => {
